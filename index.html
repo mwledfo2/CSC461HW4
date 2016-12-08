@@ -1,6 +1,6 @@
 &lt;!doctype html&gt;<script src="js/three.min.js"></script><script src="js/OrbitControls.js"></script><script>// <![CDATA[
   // Set up the scene, camera, and renderer as global variables.
-  var scene, camera, renderer, sphere, sphereMaterial;
+  var scene, camera, renderer, sphere, sphereMaterial, backgroundScene, backgroundCamera;
  
   init();
   animate();
@@ -37,8 +37,8 @@
 	
 	// Set the background scene.
     var texloader = new THREE.TextureLoader();
-	texloader.setCrossOrigin("anonymous");
-	var texture = texloader.load("FroggerBackground.jpg");
+	texloader.crossOrigin = '';//setCrossOrigin("anonymous");
+	var texture = texloader.load("https://mwledfo2.github.io/CSC461HW4/FroggerBackground.jpg");
 	var backgroundMesh = new THREE.Mesh(
 		new THREE.PlaneGeometry(2048, 2048, 8, 8),
 		new THREE.MeshBasicMaterial({
@@ -48,8 +48,8 @@
 	
 	backgroundMesh.material.depthTest = false;
 	backgroundMesh.material.depthWrite = false;
-	var backgroundScene = new THREE.Scene();
-	var backgroundCamera = new THREE.Camera();
+	backgroundScene = new THREE.Scene();
+	backgroundCamera = new THREE.Camera();
 	backgroundScene.add(backgroundCamera);
 	backgroundScene.add(backgroundMesh);
  
@@ -57,14 +57,7 @@
     var light = new THREE.PointLight(0xffffff);
     light.position.set(10,50,130);
     scene.add(light);
-	
-	// Load in the mesh and add it to the scene.
-    //var loader = new THREE.JSONLoader();
-    //loader.load( "models/treehouse_logo.js", function(geometry){
-    //  var material = new THREE.MeshLambertMaterial({color: 0x55B663});
-    //  mesh = new THREE.Mesh(geometry, material);
-    //  scene.add(mesh);
-    //});
+	backgroundScene.add(light);
 	
 	sphereMaterial = new THREE.MeshLambertMaterial(
 		{
@@ -96,6 +89,7 @@
  
     // Render the scene.
     renderer.render(scene, camera);
+	renderer.render(backgroundScene, backgroundCamera);
  
   }
   
