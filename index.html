@@ -88,9 +88,10 @@
     requestAnimationFrame(animate);
  
     // Render the scene.
-    renderer.render(scene, camera);
+	renderer.autoClear = false;
+	renderer.clear();
 	renderer.render(backgroundScene, backgroundCamera);
- 
+    renderer.render(scene, camera);
   }
   
   function handleKeyDown(event)
