@@ -1,0 +1,293 @@
+&lt;!doctype html&gt;<script src="js/three.min.js"></script><script src="js/OrbitControls.js"></script><script>// <![CDATA[
+  // Set up the scene, camera, and renderer as global variables.
+  var scene, camera, renderer, sphere, sphereMaterial;
+ 
+  init();
+  animate();
+  
+  // Sets up the scene.
+  function init() {
+	
+    // Create the scene and set the scene size.
+    scene = new THREE.Scene();
+    var WIDTH = window.innerWidth-50,
+        HEIGHT = window.innerHeight-50;
+ 
+    // Create a renderer and add it to the DOM.
+    renderer = new THREE.WebGLRenderer({antialias:true});
+    renderer.setSize(WIDTH, HEIGHT);
+    document.body.appendChild(renderer.domElement);
+	
+	// Add event listener to the DOM.
+	document.addEventListener('keydown', handleKeyDown, false);
+ 
+    // Create a camera, zoom it out from the model a bit, and add it to the scene.
+    camera = new THREE.PerspectiveCamera(45, WIDTH / HEIGHT, 0.1, 10000);
+    camera.position.set(0,0,1000);
+    scene.add(camera);
+	
+	// Create an event listener that resizes the renderer with the browser window.
+    window.addEventListener('resize', function() {
+      var WIDTH = window.innerWidth-50,
+          HEIGHT = window.innerHeight-50;
+      renderer.setSize(WIDTH, HEIGHT);
+      camera.aspect = WIDTH / HEIGHT;
+      camera.updateProjectionMatrix();
+    });
+	
+	// Set the background scene.
+    var texloader = new THREE.TextureLoader();
+	texloader.setCrossOrigin("anonymous");
+	var texture = texloader.load("FroggerBackground.jpg");
+	var backgroundMesh = new THREE.Mesh(
+		new THREE.PlaneGeometry(2048, 2048, 8, 8),
+		new THREE.MeshBasicMaterial({
+			map: texture
+		})
+	);
+	
+	backgroundMesh.material.depthTest = false;
+	backgroundMesh.material.depthWrite = false;
+	var backgroundScene = new THREE.Scene();
+	var backgroundCamera = new THREE.Camera();
+	backgroundScene.add(backgroundCamera);
+	backgroundScene.add(backgroundMesh);
+ 
+    // Create a light, set its position, and add it to the scene.
+    var light = new THREE.PointLight(0xffffff);
+    light.position.set(10,50,130);
+    scene.add(light);
+	
+	// Load in the mesh and add it to the scene.
+    //var loader = new THREE.JSONLoader();
+    //loader.load( "models/treehouse_logo.js", function(geometry){
+    //  var material = new THREE.MeshLambertMaterial({color: 0x55B663});
+    //  mesh = new THREE.Mesh(geometry, material);
+    //  scene.add(mesh);
+    //});
+	
+	sphereMaterial = new THREE.MeshLambertMaterial(
+		{
+			color: 0x00CC00
+		}
+	);
+	
+	const RADIUS = 50;
+	const SEGMENTS = 16;
+	const RINGS = 16;
+	
+	
+	sphere = new THREE.Mesh(
+		new THREE.SphereGeometry(
+			RADIUS,
+			SEGMENTS,
+			RINGS),
+		sphereMaterial);
+		
+	sphere.position.z = -300;
+	scene.add(sphere);
+  }
+  
+  // Renders the scene and updates the render as needed.
+  function animate() {
+ 
+    // Read more about requestAnimationFrame at http://www.paulirish.com/2011/requestanimationframe-for-smart-animating/
+    requestAnimationFrame(animate);
+ 
+    // Render the scene.
+    renderer.render(scene, camera);
+ 
+  }
+  
+  function handleKeyDown(event)
+  {
+	const MOVEMENT = 100;
+	switch (event.code)
+	{
+		case "ArrowRight":
+			if (sphere.position.x < 5 * MOVEMENT)
+				sphere.position.x += MOVEMENT;
+			break;
+		case "ArrowLeft":
+			if (sphere.position.x > -5 * MOVEMENT)
+				sphere.position.x -= MOVEMENT;
+			break;
+		case "ArrowUp":
+			if (sphere.position.y < 5 * MOVEMENT)
+				sphere.position.y += MOVEMENT;
+			break;
+		case "ArrowDown":
+			if (sphere.position.y > -5 * MOVEMENT)
+			sphere.position.y -= MOVEMENT;
+			break;
+	}
+  }
+  
+  // does stuff when keys are pressed
+	function handleKeyDown2(event) {
+    
+		const modelEnum = {TRIANGLES: "triangles", SPHERE: "sphere"}; // enumerated model type
+		const dirEnum = {NEGATIVE: -1, POSITIVE: 1}; // enumerated rotation direction
+		
+		function highlightModel(modelType,whichModel) {
+			if (handleKeyDown.modelOn != null)
+				handleKeyDown.modelOn.on = false;
+			handleKeyDown.whichOn = whichModel;
+			if (modelType == modelEnum.TRIANGLES)
+				handleKeyDown.modelOn = inputTriangles[whichModel]; 
+			else
+				handleKeyDown.modelOn = inputSpheres[whichModel]; 
+			handleKeyDown.modelOn.on = true; 
+		} // end highlight model
+		
+		function translateModel(offset) {
+			if (handleKeyDown.modelOn != null)
+				vec3.add(handleKeyDown.modelOn.translation,handleKeyDown.modelOn.translation,offset);
+		} // end translate model
+
+		function rotateModel(axis,direction) {
+			if (handleKeyDown.modelOn != null) {
+				var newRotation = mat4.create();
+
+				mat4.fromRotation(newRotation,direction*rotateTheta,axis); // get a rotation matrix around passed axis
+				vec3.transformMat4(handleKeyDown.modelOn.xAxis,handleKeyDown.modelOn.xAxis,newRotation); // rotate model x axis tip
+				vec3.transformMat4(handleKeyDown.modelOn.yAxis,handleKeyDown.modelOn.yAxis,newRotation); // rotate model y axis tip
+			} // end if there is a highlighted model
+		} // end rotate model
+		
+		// set up needed view params
+		var lookAt = vec3.create(), viewRight = vec3.create(), temp = vec3.create(); // lookat, right & temp vectors
+		lookAt = vec3.normalize(lookAt,vec3.subtract(temp,Center,Eye)); // get lookat vector
+		viewRight = vec3.normalize(viewRight,vec3.cross(temp,lookAt,Up)); // get view right vector
+		
+		// highlight static variables
+		handleKeyDown.whichOn = handleKeyDown.whichOn == undefined ? -1 : handleKeyDown.whichOn; // nothing selected initially
+		handleKeyDown.modelOn = handleKeyDown.modelOn == undefined ? null : handleKeyDown.modelOn; // nothing selected initially
+
+		switch (event.code) {
+			
+			// model selection
+			case "Space": 
+				if (handleKeyDown.modelOn != null)
+					handleKeyDown.modelOn.on = false; // turn off highlighted model
+				handleKeyDown.modelOn = null; // no highlighted model
+				handleKeyDown.whichOn = -1; // nothing highlighted
+				break;
+			case "ArrowRight": // select next triangle set
+				highlightModel(modelEnum.TRIANGLES,(handleKeyDown.whichOn+1) % numTriangleSets);
+				break;
+			case "ArrowLeft": // select previous triangle set
+				highlightModel(modelEnum.TRIANGLES,(handleKeyDown.whichOn > 0) ? handleKeyDown.whichOn-1 : numTriangleSets-1);
+				break;
+			case "ArrowUp": // select next sphere
+				highlightModel(modelEnum.SPHERE,(handleKeyDown.whichOn+1) % numSpheres);
+				break;
+			case "ArrowDown": // select previous sphere
+				highlightModel(modelEnum.SPHERE,(handleKeyDown.whichOn > 0) ? handleKeyDown.whichOn-1 : numSpheres-1);
+				break;
+				
+			// view change
+			case "KeyA": // translate view left, rotate left with shift
+				Center = vec3.add(Center,Center,vec3.scale(temp,viewRight,viewDelta));
+				if (!event.getModifierState("Shift"))
+					Eye = vec3.add(Eye,Eye,vec3.scale(temp,viewRight,viewDelta));
+				break;
+			case "KeyD": // translate view right, rotate right with shift
+				Center = vec3.add(Center,Center,vec3.scale(temp,viewRight,-viewDelta));
+				if (!event.getModifierState("Shift"))
+					Eye = vec3.add(Eye,Eye,vec3.scale(temp,viewRight,-viewDelta));
+				break;
+			case "KeyS": // translate view backward, rotate up with shift
+				if (event.getModifierState("Shift")) {
+					Center = vec3.add(Center,Center,vec3.scale(temp,Up,viewDelta));
+					Up = vec.cross(Up,viewRight,vec3.subtract(lookAt,Center,Eye)); /* global side effect */
+				} else {
+					Eye = vec3.add(Eye,Eye,vec3.scale(temp,lookAt,-viewDelta));
+					Center = vec3.add(Center,Center,vec3.scale(temp,lookAt,-viewDelta));
+				} // end if shift not pressed
+				break;
+			case "KeyW": // translate view forward, rotate down with shift
+				if (event.getModifierState("Shift")) {
+					Center = vec3.add(Center,Center,vec3.scale(temp,Up,-viewDelta));
+					Up = vec.cross(Up,viewRight,vec3.subtract(lookAt,Center,Eye)); /* global side effect */
+				} else {
+					Eye = vec3.add(Eye,Eye,vec3.scale(temp,lookAt,viewDelta));
+					Center = vec3.add(Center,Center,vec3.scale(temp,lookAt,viewDelta));
+				} // end if shift not pressed
+				break;
+			case "KeyQ": // translate view up, rotate counterclockwise with shift
+				if (event.getModifierState("Shift"))
+					Up = vec3.normalize(Up,vec3.add(Up,Up,vec3.scale(temp,viewRight,-viewDelta)));
+				else {
+					Eye = vec3.add(Eye,Eye,vec3.scale(temp,Up,viewDelta));
+					Center = vec3.add(Center,Center,vec3.scale(temp,Up,viewDelta));
+				} // end if shift not pressed
+				break;
+			case "KeyE": // translate view down, rotate clockwise with shift
+				if (event.getModifierState("Shift"))
+					Up = vec3.normalize(Up,vec3.add(Up,Up,vec3.scale(temp,viewRight,viewDelta)));
+				else {
+					Eye = vec3.add(Eye,Eye,vec3.scale(temp,Up,-viewDelta));
+					Center = vec3.add(Center,Center,vec3.scale(temp,Up,-viewDelta));
+				} // end if shift not pressed
+				break;
+			case "Escape": // reset view to default
+				Eye = vec3.copy(Eye,defaultEye);
+				Center = vec3.copy(Center,defaultCenter);
+				Up = vec3.copy(Up,defaultUp);
+				break;
+				
+			// model transformation
+			case "KeyK": // translate left, rotate left with shift
+				if (event.getModifierState("Shift"))
+					rotateModel(Up,dirEnum.NEGATIVE);
+				else
+					translateModel(vec3.scale(temp,viewRight,viewDelta));
+				break;
+			case "Semicolon": // translate right, rotate right with shift
+				if (event.getModifierState("Shift"))
+					rotateModel(Up,dirEnum.POSITIVE);
+				else
+					translateModel(vec3.scale(temp,viewRight,-viewDelta));
+				break;
+			case "KeyL": // translate backward, rotate up with shift
+				if (event.getModifierState("Shift"))
+					rotateModel(viewRight,dirEnum.POSITIVE);
+				else
+					translateModel(vec3.scale(temp,lookAt,-viewDelta));
+				break;
+			case "KeyO": // translate forward, rotate down with shift
+				if (event.getModifierState("Shift"))
+					rotateModel(viewRight,dirEnum.NEGATIVE);
+				else
+					translateModel(vec3.scale(temp,lookAt,viewDelta));
+				break;
+			case "KeyI": // translate up, rotate counterclockwise with shift 
+				if (event.getModifierState("Shift"))
+					rotateModel(lookAt,dirEnum.POSITIVE);
+				else
+					translateModel(vec3.scale(temp,Up,viewDelta));
+				break;
+			case "KeyP": // translate down, rotate clockwise with shift
+				if (event.getModifierState("Shift"))
+					rotateModel(lookAt,dirEnum.NEGATIVE);
+				else
+					translateModel(vec3.scale(temp,Up,-viewDelta));
+				break;
+			case "Backspace": // reset model transforms to default
+				for (var whichTriSet=0; whichTriSet<numTriangleSets; whichTriSet++) {
+					vec3.set(inputTriangles[whichTriSet].translation,0,0,0);
+					vec3.set(inputTriangles[whichTriSet].xAxis,1,0,0);
+					vec3.set(inputTriangles[whichTriSet].yAxis,0,1,0);
+				} // end for all triangle sets
+				for (var whichSphere=0; whichSphere<numSpheres; whichSphere++) {
+					vec3.set(inputSpheres[whichSphere].translation,0,0,0);
+					vec3.set(inputSpheres[whichTriSet].xAxis,1,0,0);
+					vec3.set(inputSpheres[whichTriSet].yAxis,0,1,0);
+				} // end for all spheres
+				break;
+		} // end switch
+	} // end handleKeyDown
+  
+ 
+// ]]></script>
