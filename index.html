@@ -1,6 +1,6 @@
 &lt;!doctype html&gt;<script src="js/three.min.js"></script><script src="js/OrbitControls.js"></script><script>// <![CDATA[
   // Set up the scene, camera, and renderer as global variables.
-  var scene, camera, renderer, sphere, sphereMaterial, backgroundScene, backgroundCamera;
+  var scene, camera, renderer, sphere, sphereMaterial, backgroundScene, backgroundCamera, Log1, Log2, Log3, Car1, Car2, Car3, WIDTH, HEIGHT, collidableMeshList;
  
   init();
   animate();
@@ -10,8 +10,9 @@
 	
     // Create the scene and set the scene size.
     scene = new THREE.Scene();
-    var WIDTH = window.innerWidth-50,
-        HEIGHT = window.innerHeight-50;
+    WIDTH = 800;//window.innerWidth-50;
+    HEIGHT = 480;//window.innerHeight-50;
+	collidableMeshList = [];
  
     // Create a renderer and add it to the DOM.
     renderer = new THREE.WebGLRenderer({antialias:true});
@@ -26,17 +27,8 @@
     camera.position.set(0,0,1000);
     scene.add(camera);
 	
-	// Create an event listener that resizes the renderer with the browser window.
-    window.addEventListener('resize', function() {
-      var WIDTH = window.innerWidth-50,
-          HEIGHT = window.innerHeight-50;
-      renderer.setSize(WIDTH, HEIGHT);
-      camera.aspect = WIDTH / HEIGHT;
-      camera.updateProjectionMatrix();
-    });
-	
-	// Set the background scene.
-    var texloader = new THREE.TextureLoader();
+	// Set the background scene. 
+    /*var texloader = new THREE.TextureLoader();
 	texloader.crossOrigin = '';//setCrossOrigin("anonymous");
 	var texture = texloader.load("https://mwledfo2.github.io/CSC461HW4/FroggerBackground.jpg");
 	var backgroundMesh = new THREE.Mesh(
@@ -52,12 +44,13 @@
 	backgroundCamera = new THREE.Camera();
 	backgroundScene.add(backgroundCamera);
 	backgroundScene.add(backgroundMesh);
+	*/
  
     // Create a light, set its position, and add it to the scene.
     var light = new THREE.PointLight(0xffffff);
     light.position.set(10,50,130);
     scene.add(light);
-	backgroundScene.add(light);
+	//backgroundScene.add(light);
 	
 	sphereMaterial = new THREE.MeshLambertMaterial(
 		{
@@ -77,8 +70,76 @@
 			RINGS),
 		sphereMaterial);
 		
-	sphere.position.z = -300;
+	sphere.position.y = -360;
 	scene.add(sphere);
+	
+	const LogMaterial = new THREE.MeshLambertMaterial(
+		{
+			color: 0xCCCC00
+		}
+	);
+  
+	const CarMaterial = new THREE.MeshLambertMaterial(
+		{
+			color: 0xCC0000
+		}
+	);
+  
+	  // setup Logs
+	  Log1 = new THREE.Mesh(
+		new THREE.BoxGeometry(200, 50, 50),
+		LogMaterial
+	  );
+	  Log1.position.x = 150;
+	  Log1.position.y = 90;
+	  scene.add(Log1);
+	  collidableMeshList.push(Log1);
+	  
+	  Log2 = new THREE.Mesh(
+		new THREE.BoxGeometry(200, 50, 50),
+		LogMaterial
+	  );
+	  Log2.position.x = 150;
+	  Log2.position.y = 180;
+	  scene.add(Log2);
+	  collidableMeshList.push(Log2);
+	  
+	  Log3 = new THREE.Mesh(
+		new THREE.BoxGeometry(200, 50, 50),
+		LogMaterial
+	  );
+	  Log3.position.x = 150;
+	  Log3.position.y = 270;
+	  scene.add(Log3);
+	  collidableMeshList.push(Log3);
+	  
+	  // setup Cars
+	  Car1 = new THREE.Mesh(
+		new THREE.BoxGeometry(200, 50, 50),
+		CarMaterial
+	  );
+	  Car1.position.x = 150;
+	  Car1.position.y = -90;
+	  scene.add(Car1);
+	  collidableMeshList.push(Car1);
+	  
+	  Car2 = new THREE.Mesh(
+		new THREE.BoxGeometry(200, 50, 50),
+		CarMaterial
+	  );
+	  Car2.position.x = 150;
+	  Car2.position.y = -180;
+	  scene.add(Car2);
+	  collidableMeshList.push(Car2);
+	  
+	  Car3 = new THREE.Mesh(
+		new THREE.BoxGeometry(200, 50, 50),
+		CarMaterial
+	  );
+	  Car3.position.x = 150;
+	  Car3.position.y = -270;
+	  scene.add(Car3);
+	  collidableMeshList.push(Car3);
   }
   
   // Renders the scene and updates the render as needed.
@@ -88,32 +149,82 @@
     requestAnimationFrame(animate);
  
     // Render the scene.
-	renderer.autoClear = false;
-	renderer.clear();
-	renderer.render(backgroundScene, backgroundCamera);
+	//renderer.render(backgroundScene, backgroundCamera);
+	Log1.position.x += 2;
+	if (Log1.position.x > WIDTH)
+		Log1.position.x = -WIDTH;
+	Log2.position.x += 4;
+	if (Log2.position.x > WIDTH)
+		Log2.position.x = -WIDTH;
+	Log3.position.x += 6;
+	if (Log3.position.x > WIDTH)
+		Log3.position.x = -WIDTH;
+		
+	Car1.position.x += 5;
+	if (Car1.position.x > WIDTH)
+		Car1.position.x = -WIDTH;
+	Car2.position.x += 8;
+	if (Car2.position.x > WIDTH)
+		Car2.position.x = -WIDTH;
+	Car3.position.x += 4;
+	if (Car3.position.x > WIDTH)
+		Car3.position.x = -WIDTH;
+		
+	// collision detection
+	var originPoint = sphere.position.clone();
+	for (var vertexIndex = 0; vertexIndex < sphere.geometry.vertices.length; vertexIndex++)
+	{
+		var localVertex = sphere.geometry.vertices[vertexIndex].clone();
+		var globalVertex = localVertex.applyMatrix4( sphere.matrix );
+		var directionVector = globalVertex.sub( sphere.position );
+		
+		var ray = new THREE.Raycaster (originPoint, directionVector.clone().normalize() );
+		var collisionResults = ray.intersectObjects( collidableMeshList );
+		
+		
+		if (collisionResults.length > 0 && collisionResults[0].distance < directionVector.length() && sphere.position.y < 0) {
+			sphere.position.y = -360;
+		}
+	}
+	if (sphere.position.y > 0) {
+			var onLog = false;
+			for (var i = 0; i < collidableMeshList.length; i++) {
+				if (sphere.position.x < collidableMeshList[i].position.x + 100 && sphere.position.x > collidableMeshList[i].position.x - 100 &&sphere.position.y == collidableMeshList[i].position.y ) {
+					onLog = true;
+				}
+			}
+			if (onLog)
+			{
+				sphere.position.x += sphere.position.y / 45; 
+			} else {
+				sphere.position.y = -360;
+			}
+		}
+	
     renderer.render(scene, camera);
   }
   
   function handleKeyDown(event)
   {
-	const MOVEMENT = 100;
+	const MOVEMENT_Y = 90;
+	const MOVEMENT_X = 160;
 	switch (event.code)
 	{
 		case "ArrowRight":
-			if (sphere.position.x < 5 * MOVEMENT)
-				sphere.position.x += MOVEMENT;
+			if (sphere.position.x < 4 * MOVEMENT_X)
+				sphere.position.x += MOVEMENT_X;
 			break;
 		case "ArrowLeft":
-			if (sphere.position.x > -5 * MOVEMENT)
-				sphere.position.x -= MOVEMENT;
+			if (sphere.position.x > -4 * MOVEMENT_X)
+				sphere.position.x -= MOVEMENT_X;
 			break;
 		case "ArrowUp":
-			if (sphere.position.y < 5 * MOVEMENT)
-				sphere.position.y += MOVEMENT;
+			if (sphere.position.y < 4 * MOVEMENT_Y)
+				sphere.position.y += MOVEMENT_Y;
 			break;
 		case "ArrowDown":
-			if (sphere.position.y > -5 * MOVEMENT)
-			sphere.position.y -= MOVEMENT;
+			if (sphere.position.y > -4 * MOVEMENT_Y)
+			sphere.position.y -= MOVEMENT_Y;
 			break;
 	}
   }
